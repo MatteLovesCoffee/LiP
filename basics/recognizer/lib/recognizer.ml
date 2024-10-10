@@ -1,4 +1,9 @@
-let lang1 _ = failwith ""
+let rec lang1 w = 
+  match w with
+    [] -> false |
+    '0' :: ls -> lang1 ls |
+    '1' :: ls -> lang1 ls |
+    _ -> false
 
 let lang2 _ = failwith ""
 
