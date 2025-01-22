@@ -1,0 +1,8 @@
+(library
+ (name toyparsertest)
+ (inline_tests)
+ (preprocess
+  (pps ppx_inline_test))
+ (libraries toyparser))
+
+; DELETE ANY LINE BELOW ADDED BY `dune init proj`
