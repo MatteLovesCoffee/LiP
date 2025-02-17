@@ -20,6 +20,7 @@ rule read_token =
   | ")" { RPAREN }
   | "=" { ASSIGN }
   | "+" { PLUS }
+  | "," { NEXTARG }
   | ";" { SEQ } 
   | atok { ATOK (Lexing.lexeme lexbuf) }
   | btok { BTOK (Lexing.lexeme lexbuf) }

@@ -4,6 +4,7 @@ type token =
   | ASSIGN
   | PLUS
   | SEQ
+  | NEXTARG
   | ATOK of string
   | BTOK of string
   | CTOK of string
@@ -19,6 +20,7 @@ let string_of_token = function
   | ASSIGN -> "ASSIGN"
   | PLUS -> "PLUS"
   | SEQ -> "SEQ"
+  | NEXTARG -> "NEXTARG"
   | ID(s) -> "ID(" ^ s ^ ")"
   | CONST(s) -> "CONST(" ^ s ^ ")"
   | EOF -> "EOF"

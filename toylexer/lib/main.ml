@@ -25,5 +25,8 @@ let string_of_frequencies fl =
 
 (* frequency : int -> 'a list -> ('a * int) list *)
 let frequency n tlist =
-  
-
+  let rec firstn n = function
+    [] -> []
+  | x::t -> if n=1 then [x] else x::firstn (n-1) t
+in
+firstn n (List.rev (List.sort (fun a b -> let occ = compare (snd a) (snd b) in if occ=0 then compare (fst a) (fst b) else occ) (List.fold_left (fun acc token -> let element = (token, List.length (List.filter (fun a -> token = a) tlist)) in if (List.mem element acc) then acc else acc@[element]) [] tlist)))
