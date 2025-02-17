@@ -6,3 +6,6 @@
  (libraries toylexer))
 
 ; DELETE ANY LINE BELOW ADDED BY `dune init proj`
+
+(test
+ (name test_toylexer))

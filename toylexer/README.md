@@ -55,7 +55,7 @@ prints the list of the n most frequent tokens.
 To this purpose, you must implement the function
 ```ocaml
 frequency : int -> 'a list -> ('a * int) list
-```` 
+```
 in [lib/main.ml](lib/main.ml).
 This function takes as input an integer n
 and a list of tokens,
