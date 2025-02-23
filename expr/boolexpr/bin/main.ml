@@ -1,4 +1,4 @@
-open BoolexprLib.Main
+open Boolexpr.Main
   
 (* read file, and output it to a string *)
 

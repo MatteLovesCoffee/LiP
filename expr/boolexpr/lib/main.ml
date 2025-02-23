@@ -13,11 +13,10 @@ let parse (s : string) : boolExpr =
 
 
 exception NoRuleApplies
-
 let rec trace1 = function
     If(True,e1,_) -> e1
   | If(False,_,e2) -> e2
-  | If(_,_,_) -> failwith "TODO"
+  | If(e0,e1,e2) -> trace1 (If(trace1 e0, e1, e2))
   | _ -> raise NoRuleApplies
 
 let rec trace e = try
@@ -25,8 +24,7 @@ let rec trace e = try
     in e::(trace e')
   with NoRuleApplies -> [e]
 
-
 let rec eval = function
-    True -> true
-  | False -> false
-  | If(_,_,_) -> failwith "TODO"
+True -> true
+| False -> false
+| If(e0, e1, e2) -> if eval e0 then eval e1 else eval e2

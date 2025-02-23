@@ -1,2 +1,2 @@
-open BoolexprLib.Main;;
-open BoolexprLib.Ast;;
+open Boolexpr.Main;;
+open Boolexpr.Ast;;
