@@ -18,7 +18,7 @@ let read_line () =
 (* print a trace *)
 
 let print_trace = function
-  | Cmd(c,s)::l -> print_string (string_of_trace (vars_of_cmd c) (Cmd(c,s)::l))
+  | Cmd(c,s)::l -> print_string (string_of_trace (vars_of_cmd c) (Cmd(c,s)::l)^"\n")
   | _ -> failwith "print_trace on empty trace"
 ;;
 

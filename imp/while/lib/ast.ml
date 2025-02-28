@@ -4,7 +4,7 @@ type expr =
   | True
   | False
   | Var of string
-  | Const of int     
+  | Const of int
   | Not of expr
   | And of expr * expr
   | Or of expr * expr
