@@ -4,8 +4,8 @@ open Types
 
 let parse (s : ide) =
   let lexbuf = Lexing.from_string s in
-  let cmd = Parser.prog Lexer.read lexbuf in
-  cmd
+  let ast = Parser.prog Lexer.read lexbuf in
+  ast
 
 let bind st ide ev = fun ide' -> if ide = ide' then ev else st ide';;
 
