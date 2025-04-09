@@ -52,7 +52,7 @@ let rec string_of_memval st = function
 | String string -> string
 | Bool bool -> string_of_bool bool
 
-let rec build_block (decl : decl list) (cmd : cmd) =
+let build_block (decl : decl list) (cmd : cmd) =
   List.fold_left(fun c d -> (Decl(d, c))) cmd (List.rev decl)
 ;;
 
@@ -169,7 +169,7 @@ and trace1_decl (st : state) = function
     DSt (make_state (pushenv st env') mem' loc')
   | MGenericVar (id, Var(x)) ->
     (match (topenv st) x with
-      | Fun (_, _, _, _, _ ) | Proc (_, _, _)-> raise (VarError "Borrowing from function")
+      | Fun (_, _, _, _) | Proc (_, _)-> raise (VarError "Borrowing from function")
       | Mut (_, IntType, _) | Imm (_, IntType, _) ->  let e', st' = trace1_expr st (Var(x)) in Dec (MGenericVar(id, e'), st')
       | var ->
         let loc' = getloc st in

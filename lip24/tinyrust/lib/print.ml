@@ -1,9 +1,17 @@
 open Ast
 open Types
 
-let string_of_val = function
-  | n -> string_of_int n
+(*
+Libreria per la visualizzazione dei trace a scopo di debugging.
+*)
 
+let rec string_of_memval m loc = match m loc with
+  | IntRef loc' -> "ref of " ^ string_of_memval m loc'
+  | StringRef loc' -> "ref of " ^ string_of_memval m loc'
+  | Int int -> string_of_int int
+  | String string -> string
+  | Bool bool -> string_of_bool bool
+;;
 
 let rec string_of_expr_list = function
   | [] -> ""
@@ -66,7 +74,7 @@ let rec string_of_env s = function
 
 let string_of_mem1 (m,l) i =
   assert (i<l);
-  string_of_val (m i) ^ "/" ^ string_of_int i
+  string_of_memval m i ^ "/" ^ string_of_int i
 
 let rec range a b = if b<a then [] else a::(range (a+1) b);;
 
@@ -90,10 +98,13 @@ let rec union l1 l2 = match l1 with
   | x::l1' -> (if List.mem x l2 then [] else [x]) @ union l1' l2
 
 let rec vars_of_expr = function
-    True
-  | False
-  | Const _ -> []
-  | Var x -> [x]
+  | Uninit
+  | IntConst _
+  | FloatConst _
+  | CharConst _
+  | StringConst _
+  | BoolConst _ -> []
+  | Var x | Mut x | TVar (x, _) | TMut (x, _) -> [x]
   | Not e -> vars_of_expr e
   | And(e1,e2)
   | Or(e1,e2)
@@ -102,23 +113,35 @@ let rec vars_of_expr = function
   | Mul(e1,e2)
   | Eq(e1,e2)
   | Leq(e1,e2) -> union (vars_of_expr e1) (vars_of_expr e2)
-  | Call(f,e) -> union [f] (vars_of_expr e)
+  | Call(f,e) -> union [f] (List.flatten (List.map vars_of_expr e))
   | CallExec(c,e) -> union (vars_of_cmd c) (vars_of_expr e)
   | CallRet(e) -> vars_of_expr e
 
 and vars_of_cmd = function
-    Skip -> []
+    Skip
+  | Break -> []
   | Assign(x,e) -> union [x] (vars_of_expr e)
   | Seq(c1,c2) -> union (vars_of_cmd c1) (vars_of_cmd c2)
   | If(e,c1,c2) -> union (vars_of_expr e) (union (vars_of_cmd c1) (vars_of_cmd c2))
-  | While(e,c) -> union (vars_of_expr e) (vars_of_cmd c)
+  | Loop(c) -> union ["loop: "] (vars_of_cmd c)
+  | Decl(d, c) -> union (vars_of_decl d) (vars_of_cmd c)
+  | Block c -> union ["{"] (union (vars_of_cmd c) ["}"] )
 
-let vars_of_decl = function
-  | IntVar(x) -> [x]
-  | Fun(f,x,c,e) -> union [x;f] (union (vars_of_cmd c) (vars_of_expr e))
-
-let vars_of_prog (Prog(ds,_)) = List.concat_map vars_of_decl ds
-
+and vars_of_decl = function
+  | IntVar (x, e) (* immutable var *)
+  | GenericVar (x, e) (* immutable var *)
+  | BIntVar (x, e) (* immutable borrowing *)
+  | BGenericVar (x, e) (* immutable borrowing *)
+  | MBIntVar (x, e) (* mutable var immutable borrowing *)
+  | MBGenericVar (x, e) (* mutable var immutable borrowing *)
+  | MIntVar (x, e) (* mutable var *)
+  | MGenericVar (x, e) (* mutable var *)
+  | BMIntVar (x, e) (* mutable borrowing *)
+  | BMGenericVar (x, e) (* mutable borrowing *)
+  | MBMIntVar (x, e) (* mutable var mutable borrowing *)
+  | MBMGenericVar (x, e) -> union [x] (vars_of_expr e)
+  | Fun(f,dl,_,c,e) -> union [f] (union (List.flatten (List.map (vars_of_decl) dl)) (union (vars_of_cmd c) (vars_of_expr e)))
+  | Proc(f,dl,c) -> union [f] (union (List.flatten (List.map (vars_of_decl) dl)) (vars_of_cmd c))
 
 let string_of_conf vars = function
     St st -> string_of_state st vars
