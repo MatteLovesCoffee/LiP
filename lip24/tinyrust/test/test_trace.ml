@@ -21,8 +21,9 @@
 
 *)
 
-open Tinyrust
+open TinyrustLib
 open Ast
+open Types
 open Common
 
 (** ------------------------------------------
@@ -34,9 +35,9 @@ type mut = Mutable | Immutable
 type trace_error =
   | TypeError of string
   | UnboundVar of ide
-  | CannotMutate of ide
-  | MovedValue of ide
-  | MutBorrowOfNonMut of ide
+  | CannotMutate of ide (* assignment to immutable *)
+  | MovedValue of ide (* ownership error (of strings)*)
+  | MutBorrowOfNonMut of ide (* &mut of immutable *)
   | DataRace of ide * mut * mut
   | OutOfGas of int
   | NotInLoop
@@ -88,39 +89,45 @@ let string_of_trace_error = function
 (* Feel free to increase or decrease the amount of steps (gas) *)
 let tests : (string * int * string trace_result) array =
   [|
-    ("01-print.rs",           25, Ok "3\n4\n");
-    ("02-intError.rs",        25, Error (CannotMutate "x"));
-    ("03-intOk.rs",           25, Ok "7\n");
-    ("04-stringError.rs",     25, Error (UnboundVar "x"));
-    ("05-stringOk.rs",        25, Ok "Ciao, mondo\n");
-    ("06-scopeOk.rs",         25, Ok "6\n3\n");
-    ("07-scopeError.rs",      25, Error (UnboundVar "y"));
-    ("08-func.rs",            25, Ok "7\n");
-    ("09-proc.rs",            25, Ok "7\n");
-    ("10-ifThenElse.rs",      25, Ok "dispari\n");
-    ("11-ownError.rs",        25, Error (MovedValue "x"));
-    ("12-ownFnError.rs",      25, Error (MovedValue "x"));
-    ("13-borrow.rs",          25, Ok "Ciao\nCiao\n");
-    ("14-borrowFn.rs",        25, Ok "il parametro x: Ciao\nil parametro prestato: Ciao\n" );
-    ("15-borrowError.rs",     25, Error (DataRace ("x", Mutable, Immutable)));
-    ("16-borrowMut.rs",       25, Ok "Ciao, mondo\nCiao, mondo\n");
-    ("17-borrowMutError.rs",  40, Error (MutBorrowOfNonMut "x"));
-    ("18-loop.rs",            50, Error (OutOfGas 50));
-    ("19-loopBreak.rs",       50, Ok "3\n2\n1\n0\n");
-    ("20-loopNested.rs",      50, Ok "0,0\n0,1\n1,0\n1,1\n2,0\n2,1\n");
-    ("21-exprBlock.rs",       25, Ok "7\n");
-    ("22-funExpr.rs",         25, Error (UnboundVar "interna"));
-    ("23-scopeCheck.rs",      25, Error (UnboundVar "y"));
+    ("01-print.rs",           100, Ok "3\n4\n");
+    ("02-intError.rs",        100, Error (CannotMutate "x"));
+    ("03-intOk.rs",           100, Ok "7\n");
+    ("04-stringError.rs",     100, Error (UnboundVar "x"));
+    ("05-stringOk.rs",        100, Ok "Ciao, mondo\n");
+    ("06-scopeOk.rs",         100, Ok "6\n3\n");
+    ("07-scopeError.rs",      100, Error (UnboundVar "y"));
+    ("08-func.rs",            100, Ok "7\n");
+    ("09-proc.rs",            100, Ok "7\n");
+    ("10-ifThenElse.rs",      100, Ok "dispari\n");
+    ("11-ownError.rs",        100, Error (MovedValue "x"));
+    ("12-ownFnError.rs",      100, Error (MovedValue "x"));
+    ("13-borrow.rs",          100, Ok "Ciao\nCiao\n");
+    ("14-borrowFn.rs",        100, Ok "il parametro x: Ciao\nil parametro prestato: Ciao\n" );
+    ("15-borrowError.rs",     100, Error (DataRace ("x", Mutable, Immutable)));
+    ("16-borrowMut.rs",       100, Ok "Ciao, mondo\nCiao, mondo\n");
+    ("17-borrowMutError.rs",  100, Error (MutBorrowOfNonMut "x"));
+    ("18-loop.rs",            100, Error (OutOfGas 100));
+    ("19-loopBreak.rs",       100, Ok "3\n2\n1\n0\n");
+    ("20-loopNested.rs",      100, Ok "0,0\n0,1\n1,0\n1,1\n2,0\n2,1\n");
+    ("21-exprBlock.rs",       100, Ok "7\n");
+    ("22-funExpr.rs",         100, Error (UnboundVar "interna"));
+    ("23-scopeCheck.rs",      100, Error (UnboundVar "y"));
   |] [@@ocamlformat "disable"]
 
 (** ------------------------------------------
     Start of trace tests
     ------------------------------------------ *)
 
+
+let rec last = function
+  | [] -> failwith "last on empty list"
+  | [x] -> x
+  | _::l -> last l
+
 let%expect_test "test_trace" =
   Array.iter2
     (fun (name, prog) (_, gas, expected) ->
-      let prog : Ast.prog = Parser.parse_string prog in
+      let prog : Ast.cmd = Trace.parse prog in
 
       (* We're assuming the return type of [Trace.trace_prog] is:
 
@@ -132,8 +139,28 @@ let%expect_test "test_trace" =
          If you used exceptions, use the [try .. with] construct here
          and convert the exception to a result.
       *)
-      let _, (actual : string trace_result) = Trace.trace_prog gas prog in
-
+      let (actual : string trace_result) =
+        try
+          let trace = (Trace.trace_prog gas prog) in
+          (match last (fst trace) with
+            | (St _) -> Ok (snd trace)
+            | Cmd(_,_) -> Error (OutOfGas gas))
+        with
+          | UnboundVarException id -> Error (UnboundVar id)
+          | TypeError s -> Error (TypeError s)
+          | OwnershipError id -> Error (MovedValue id)
+          | MutBorrowOfNonMut id -> Error (MutBorrowOfNonMut id)
+          | AssignmentError id -> Error (CannotMutate id)
+          | MultipleBorrow (id, envval1, envval2) -> Error (DataRace (id, 
+          (match envval1 with
+            | Imm(_, _, _) -> Immutable
+            | Mut(_, _, _) -> Mutable
+            | _ -> raise (ParserError "ParserError")),
+            (match envval2 with
+            | Imm(_, _, _) -> Immutable
+            | Mut(_, _, _) -> Mutable
+            | _ -> raise (ParserError "ParserError"))))
+      in
       let icon =
         match (actual, expected) with
         | Ok _, Ok _ | Error _, Error _ -> "✔"

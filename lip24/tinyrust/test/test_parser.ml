@@ -1,4 +1,4 @@
-open Tinyrust
+open TinyrustLib
 open Common
 
 (** ------------------------------------------
@@ -10,7 +10,7 @@ let%test_unit "test_parser" =
     (fun ex ->
       let p = read_file ex in
       try
-        Parser.parse_string p |> ignore;
+        Trace.parse p |> ignore;
         pr "✔ %s\n" ex
       with _ ->
         pr "✘ Couldn't parse %s\n" ex)

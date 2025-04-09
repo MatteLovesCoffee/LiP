@@ -8,7 +8,7 @@ let spr = Printf.sprintf
 
   To get this path, [cd] into the examples directory and run [pwd].
 *)
-let examples_dir = "/absolute/path/to/tinyrust/examples/"
+let examples_dir = "/workspaces/lip/lip24/examples/"
 
 let examples =
   let full_name name = examples_dir ^ name in
